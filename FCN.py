@@ -23,16 +23,13 @@ class FCN(object):
         self.pool1 = pool[0]
         self.images = images
 
-        bias6 = utils.create_bias(shape=[4096], scope='b6')
-        conv6 = tf.nn.relu(utils.conv_2d(self.pool3, 6, 4096, step=1, scope='conv2d6') + bias6) # (1, 1, 4096)
+        conv6 = utils.conv_2d(pool3, kernel_size=6, num_output=4096, step=1, padding='VALID', scope='conv6')# (1, 1, 4096)
         conv6_drop = tf.nn.dropout(conv6, keep_prob)
 
-        bias7 = utils.create_bias(shape=[4096], scope='b7')
-        conv7 = tf.nn.relu(utils.conv_2d(conv6_drop, 1, 4096, step=1, scope='conv2d7') + bias7) #(1, 1, 4096)
+        conv7 = tf.nn.relu(utils.conv_2d(conv6_drop, kernel_size=1, num_output=4096, step=1, padding='VALID', scope='conv2d7') + bias7) #(1, 1, 4096)
         conv7_drop = tf.nn.dropout(conv7, keep_prob)
 
-        bias8 = utils.create_bias(shape=[NUM_CLASSES], scope='b8')
-        conv8 = tf.nn.relu(utils.conv_2d(conv7_drop, 1, NUM_CLASSES, step=1, scope='conv2d8') + bias8) #(1, 1, 21)
+        conv8 = tf.nn.relu(utils.conv_2d(conv7_drop, kernel_size=1, num_output=22, step=1, padding='VALID', scope='conv2d8') + bias7) #(1, 1, 21)
 
         #BASE ON FCN-8
         #如下图所示，对原图像进行卷积conv1、pool1后原图像缩小为1/2；
@@ -48,21 +45,16 @@ class FCN(object):
         #最后把conv3中的卷积核对刚才upsampling之后的图像进行再次反卷积补充细节，最后就完成了整个图像的还原。
 
         deconv1_shape = self.pool2.get_shape().as_list()
-        print(deconv1_shape)
-        bias9 = utils.create_bias(shape=[deconv1_shape[3]], scope='b9')
-        deconv1 = utils.conv2_tp(conv8, 13, deconv1_shape[3], output_shape=tf.shape(self.pool2), scope='conv2_tp1') + bias9
+        deconv1 = utils.conv2_tp(conv8, 13, deconv1_shape[3], output_shape=tf.shape(self.pool2), scope='conv2_tp1')
         fuse1 = tf.add(self.pool2, deconv1, name="fuse_1")
 
-
         deconv2_shape = self.pool1.get_shape().as_list()
-        bias10 = utils.create_bias(shape=[deconv2_shape[3]], scope='b10')
-        deconv2 = utils.conv2_tp(fuse1, 3, deconv2_shape[3], output_shape=tf.shape(self.pool1), scope='conv2_tp2') + bias10
+        deconv2 = utils.conv2_tp(fuse1, 3, deconv2_shape[3], output_shape=tf.shape(self.pool1), scope='conv2_tp2')
         fuse2 = tf.add(self.pool1, deconv2, name="fuse_2")
 
         shape = tf.shape(self.images)
         deconv3_shape = tf.stack([shape[0], shape[1], shape[2], NUM_CLASSES])
-        bias11 = utils.create_bias(shape=[NUM_CLASSES], scope='b11')
-        deconv3 = utils.conv2_tp(fuse2, 19, NUM_CLASSES, output_shape=deconv3_shape, step=8, scope='conv2_tp3') + bias11
+        deconv3 = utils.conv2_tp(fuse2, 19, NUM_CLASSES, output_shape=deconv3_shape, step=8, scope='conv2_tp3')
 
         annotation_pred = tf.argmax(deconv3, axis=3, name="prediction")
 
