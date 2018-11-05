@@ -74,8 +74,8 @@ class VOC_dataset():
             ori_img_name = img_name + '.jpg'
             seg_img_name = img_name + '.png'
 
-            ori_img = img_read_VOC(ori_img_name, SegmentationObject=False, size=572, normalization=True)
-            seg_img = img_read_VOC(seg_img_name, SegmentationObject=True, size=388, normalization=False)
+            ori_img = img_read_VOC(ori_img_name, SegmentationObject=False, size=512, normalization=True)
+            seg_img = img_read_VOC(seg_img_name, SegmentationObject=True, size=512, normalization=False)
             seg_img = np.where(seg_img == 255, 21, seg_img) #NUM_CLASSES=21 21はVOID
             seg_img_one_hot = self.make_one_hot(seg_img) #for sparse_softmax_cross_entropy_with_logits
 
