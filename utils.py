@@ -69,7 +69,7 @@ class VOC_dataset():
             for line in f:
                 img_list.append(line.rstrip('\n'))
 
-        for img_name in img_list[:10]:
+        for img_name in img_list:
 
             ori_img_name = img_name + '.jpg'
             seg_img_name = img_name + '.png'
@@ -205,7 +205,7 @@ def entropy_cost(logits, label):
     return cost
 
 def training(cost):
-    max_gradient_norm = 5
+    max_gradient_norm = 11
     optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
     params = tf.trainable_variables()
     gradients = tf.gradients(cost, params)
@@ -213,3 +213,8 @@ def training(cost):
     training_op = optimizer.apply_gradients(zip(clipped_gradients, params))
 
     return training_op
+
+def accuary(label, annotion_pred):
+    correct_pred = tf.equal(annotion_pred,tf.argmax(label, axis=3))
+    accuarcy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+    return accuarcy

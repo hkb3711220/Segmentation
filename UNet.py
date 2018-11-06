@@ -16,10 +16,9 @@ cwd = os.getcwd()
 class U_Net(object):
 
     def __init__(self):
-        self.n_epoch = 1
+        self.n_epoch = 250
         self.IMG_SIZE = 512
-        self.TEACHER_IMG_SIZE = 388
-        self.batch_size = 1
+        self.batch_size = 32
         self.NUM_CLASSES = 22
 
     def Main(self, inputs):
@@ -75,13 +74,16 @@ class U_Net(object):
     def Train(self):
 
         images = tf.placeholder(tf.float32, shape=[self.batch_size, self.IMG_SIZE, self.IMG_SIZE, 3], name="images")
-        annotation = tf.placeholder(tf.float32, shape=[self.batch_size, self.TEACHER_IMG_SIZE, self.TEACHER_IMG_SIZE, 22], name="annotation")
+        annotation = tf.placeholder(tf.float32, shape=[self.batch_size, self.IMG_SIZE, self.IMG_SIZE, 22], name="annotation")
+
         output, annotation_pred = self.Main(images)
         cost = utils.entropy_cost(logits=output, label=annotation)
         training_op = utils.training(cost)
+        accuracy = utils.accuary(annotation, annotation_pred)
 
         saver = tf.train.Saver()
-        exit()
+        loss_summary = tf.summary.scalar("entropy", cost)
+
         min_loss = None
         with tf.Session() as sess:
             print("==============================start train:{}==============================".format(time.ctime()))
@@ -91,8 +93,8 @@ class U_Net(object):
             train_ori_imgs, train_seg_imgs = VOC_dataset().next_batch(self.batch_size)
 
             for epoch in range(self.n_epoch):
-                loss_train, _ = sess.run([cost, training_op], feed_dict={images:train_ori_imgs,
-                                                                         annotation:train_seg_imgs})
+                loss_train, _ , _, acc_train= sess.run([cost, training_op, loss_summary, accuracy], feed_dict={images:train_ori_imgs,
+                                                                                                               annotation:train_seg_imgs})
 
                 if min_loss is None:
                     min_loss = loss_train
@@ -102,8 +104,8 @@ class U_Net(object):
                     saver.save(sess, cwd + "//U_NET/my_model.ckpt")
 
                 if epoch % 100 == 0:
-                    print("step", epoch, "time", time, "loss:", loss_train)
-            now = time.ctime()
+                    print("step", epoch, "time", time, "accuracy:", acc_train, "loss:", loss_train)
+
             print("==============================end train:{}==============================".format(time.ctime()))
 
 
